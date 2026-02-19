@@ -41,24 +41,19 @@ export const mockWorkflowBlocks: WorkflowBlock[] = [
   { id: 'b5', startTime: '16:30:00', endTime: '17:30:00', subtask: 'Documentation', type: 'existing' },
 ];
 
-export function computeGaps(blocks: WorkflowBlock[]): GapSlot[] {
-  const sorted = [...blocks].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const gaps: GapSlot[] = [];
+function timeToSeconds(time: string): number {
+  const [h, m, s] = time.split(":").map(Number);
+  return h * 3600 + m * 60 + s;
+}
 
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const gapStart = sorted[i].endTime;
-    const gapEnd = sorted[i + 1].startTime;
-    if (gapStart < gapEnd) {
-      gaps.push({
-        id: `gap-${i}`,
-        startTime: gapStart,
-        endTime: gapEnd,
-        type: 'gap',
-      });
-    }
-  }
+function secondsToTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
 
-  return gaps;
+  return [h, m, s]
+    .map(v => v.toString().padStart(2, "0"))
+    .join(":");
 }
 
 export function buildTimeline(blocks: WorkflowBlock[]): TimelineItem[] {
@@ -68,13 +63,16 @@ export function buildTimeline(blocks: WorkflowBlock[]): TimelineItem[] {
   for (let i = 0; i < sorted.length; i++) {
     timeline.push(sorted[i]);
     if (i < sorted.length - 1) {
-      const gapStart = sorted[i].endTime;
-      const gapEnd = sorted[i + 1].startTime;
+      const currentEnd = timeToSeconds(sorted[i].endTime);
+      const nextStart = timeToSeconds(sorted[i + 1].startTime);
+
+      const gapStart = currentEnd + 5;
+      const gapEnd = nextStart - 5;
       if (gapStart < gapEnd) {
         timeline.push({
           id: `gap-${i}`,
-          startTime: gapStart,
-          endTime: gapEnd,
+          startTime: secondsToTime(gapStart),
+          endTime: secondsToTime(gapEnd),
           type: 'gap',
         });
       }
