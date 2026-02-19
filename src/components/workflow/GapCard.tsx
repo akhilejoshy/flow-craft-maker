@@ -26,6 +26,8 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
   const [startOffset, setStartOffset] = useState(0);
   const [endOffset, setEndOffset] = useState(gapMinutes);
   const [interval, setInterval] = useState(10);
+  const [startInput, setStartInput] = useState(minutesToTime(timeToMinutes(gap.startTime)));
+  const [endInput, setEndInput] = useState(minutesToTime(timeToMinutes(gap.startTime) + gapMinutes));
   const [subtask, setSubtask] = useState('');
   const [kbMin, setKbMin] = useState(20);
   const [kbMax, setKbMax] = useState(80);
@@ -120,14 +122,19 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                     <label className="text-xs text-muted-foreground">Start Time</label>
                     <Input
                       type="text"
-                      value={selectedStart}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const mins = timeToMinutes(val);
+                      value={startInput}
+                      onChange={(e) => setStartInput(e.target.value)}
+                      onBlur={() => {
+                        const mins = timeToMinutes(startInput);
                         if (!isNaN(mins)) {
                           const offset = mins - timeToMinutes(gap.startTime);
-                          if (offset >= 0 && offset < endOffset) setStartOffset(offset);
+                          if (offset >= 0 && offset < endOffset) {
+                            setStartOffset(offset);
+                            setStartInput(minutesToTime(mins));
+                            return;
+                          }
                         }
+                        setStartInput(selectedStart);
                       }}
                       placeholder="HH:MM:SS"
                       className="mt-2"
@@ -137,14 +144,19 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                     <label className="text-xs text-muted-foreground">End Time</label>
                     <Input
                       type="text"
-                      value={selectedEnd}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const mins = timeToMinutes(val);
+                      value={endInput}
+                      onChange={(e) => setEndInput(e.target.value)}
+                      onBlur={() => {
+                        const mins = timeToMinutes(endInput);
                         if (!isNaN(mins)) {
                           const offset = mins - timeToMinutes(gap.startTime);
-                          if (offset > startOffset && offset <= gapMinutes) setEndOffset(offset);
+                          if (offset > startOffset && offset <= gapMinutes) {
+                            setEndOffset(offset);
+                            setEndInput(minutesToTime(mins));
+                            return;
+                          }
                         }
+                        setEndInput(selectedEnd);
                       }}
                       placeholder="HH:MM:SS"
                       className="mt-2"
