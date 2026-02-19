@@ -118,27 +118,37 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs text-muted-foreground">Start Time</label>
-                    <Slider
-                      min={0}
-                      max={gapMinutes}
-                      step={1}
-                      value={[startOffset]}
-                      onValueChange={([v]) => { if (v < endOffset) setStartOffset(v); }}
+                    <Input
+                      type="text"
+                      value={selectedStart}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const mins = timeToMinutes(val);
+                        if (!isNaN(mins)) {
+                          const offset = mins - timeToMinutes(gap.startTime);
+                          if (offset >= 0 && offset < endOffset) setStartOffset(offset);
+                        }
+                      }}
+                      placeholder="HH:MM:SS"
                       className="mt-2"
                     />
-                    <span className="mt-1 block text-sm font-medium text-foreground">{selectedStart}</span>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">End Time</label>
-                    <Slider
-                      min={0}
-                      max={gapMinutes}
-                      step={1}
-                      value={[endOffset]}
-                      onValueChange={([v]) => { if (v > startOffset) setEndOffset(v); }}
+                    <Input
+                      type="text"
+                      value={selectedEnd}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const mins = timeToMinutes(val);
+                        if (!isNaN(mins)) {
+                          const offset = mins - timeToMinutes(gap.startTime);
+                          if (offset > startOffset && offset <= gapMinutes) setEndOffset(offset);
+                        }
+                      }}
+                      placeholder="HH:MM:SS"
                       className="mt-2"
                     />
-                    <span className="mt-1 block text-sm font-medium text-foreground">{selectedEnd}</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">Selected duration: <span className="font-medium text-foreground">{selectedDuration}m</span></p>
