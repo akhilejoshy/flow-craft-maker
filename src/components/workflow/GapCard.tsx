@@ -26,6 +26,8 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
   const [startOffset, setStartOffset] = useState(0);
   const [endOffset, setEndOffset] = useState(gapMinutes);
   const [interval, setInterval] = useState(10);
+  const [startInput, setStartInput] = useState(minutesToTime(timeToMinutes(gap.startTime)));
+  const [endInput, setEndInput] = useState(minutesToTime(timeToMinutes(gap.startTime) + gapMinutes));
   const [subtask, setSubtask] = useState('');
   const [kbMin, setKbMin] = useState(20);
   const [kbMax, setKbMax] = useState(80);
@@ -118,27 +120,47 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs text-muted-foreground">Start Time</label>
-                    <Slider
-                      min={0}
-                      max={gapMinutes}
-                      step={1}
-                      value={[startOffset]}
-                      onValueChange={([v]) => { if (v < endOffset) setStartOffset(v); }}
+                    <Input
+                      type="text"
+                      value={startInput}
+                      onChange={(e) => setStartInput(e.target.value)}
+                      onBlur={() => {
+                        const mins = timeToMinutes(startInput);
+                        if (!isNaN(mins)) {
+                          const offset = mins - timeToMinutes(gap.startTime);
+                          if (offset >= 0 && offset < endOffset) {
+                            setStartOffset(offset);
+                            setStartInput(minutesToTime(mins));
+                            return;
+                          }
+                        }
+                        setStartInput(selectedStart);
+                      }}
+                      placeholder="HH:MM:SS"
                       className="mt-2"
                     />
-                    <span className="mt-1 block text-sm font-medium text-foreground">{selectedStart}</span>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">End Time</label>
-                    <Slider
-                      min={0}
-                      max={gapMinutes}
-                      step={1}
-                      value={[endOffset]}
-                      onValueChange={([v]) => { if (v > startOffset) setEndOffset(v); }}
+                    <Input
+                      type="text"
+                      value={endInput}
+                      onChange={(e) => setEndInput(e.target.value)}
+                      onBlur={() => {
+                        const mins = timeToMinutes(endInput);
+                        if (!isNaN(mins)) {
+                          const offset = mins - timeToMinutes(gap.startTime);
+                          if (offset > startOffset && offset <= gapMinutes) {
+                            setEndOffset(offset);
+                            setEndInput(minutesToTime(mins));
+                            return;
+                          }
+                        }
+                        setEndInput(selectedEnd);
+                      }}
+                      placeholder="HH:MM:SS"
                       className="mt-2"
                     />
-                    <span className="mt-1 block text-sm font-medium text-foreground">{selectedEnd}</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">Selected duration: <span className="font-medium text-foreground">{selectedDuration}m</span></p>
