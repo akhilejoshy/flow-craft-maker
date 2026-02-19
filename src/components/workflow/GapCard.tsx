@@ -46,6 +46,14 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
     let current = baseMin;
     let num = 1;
 
+    // First split: start and end are the same
+    rows.push({
+      num,
+      start: minutesToTime(baseMin),
+      end: minutesToTime(baseMin),
+    });
+    num++;
+
     while (current < endMin) {
       const splitEnd = Math.min(current + interval, endMin);
       rows.push({
@@ -107,7 +115,7 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
               {/* Section 1: Time Selection */}
               <section className="space-y-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Time Selection</h4>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs text-muted-foreground">Start Time</label>
                     <Slider
@@ -171,7 +179,7 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
               {/* Section 4: KB & Mouse Range */}
               <section className="space-y-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Activity Ranges</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-xs text-muted-foreground">Keyboard Activity</label>
                     <Slider

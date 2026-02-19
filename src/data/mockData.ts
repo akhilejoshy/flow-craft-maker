@@ -1,7 +1,7 @@
 export interface WorkflowBlock {
   id: string;
-  startTime: string; // HH:mm
-  endTime: string;   // HH:mm
+  startTime: string; // HH:mm:ss
+  endTime: string;   // HH:mm:ss
   subtask: string;
   type: 'existing';
 }
@@ -34,11 +34,11 @@ export const mockSubtasks: Subtask[] = [
 ];
 
 export const mockWorkflowBlocks: WorkflowBlock[] = [
-  { id: 'b1', startTime: '09:00', endTime: '09:45', subtask: 'Standup Meeting', type: 'existing' },
-  { id: 'b2', startTime: '10:30', endTime: '12:00', subtask: 'Feature Development', type: 'existing' },
-  { id: 'b3', startTime: '13:00', endTime: '14:30', subtask: 'Code Review', type: 'existing' },
-  { id: 'b4', startTime: '15:00', endTime: '16:00', subtask: 'Bug Fixing', type: 'existing' },
-  { id: 'b5', startTime: '16:30', endTime: '17:30', subtask: 'Documentation', type: 'existing' },
+  { id: 'b1', startTime: '09:00:00', endTime: '09:45:00', subtask: 'Standup Meeting', type: 'existing' },
+  { id: 'b2', startTime: '10:30:00', endTime: '12:00:00', subtask: 'Feature Development', type: 'existing' },
+  { id: 'b3', startTime: '13:00:00', endTime: '14:30:00', subtask: 'Code Review', type: 'existing' },
+  { id: 'b4', startTime: '15:00:00', endTime: '16:00:00', subtask: 'Bug Fixing', type: 'existing' },
+  { id: 'b5', startTime: '16:30:00', endTime: '17:30:00', subtask: 'Documentation', type: 'existing' },
 ];
 
 export function computeGaps(blocks: WorkflowBlock[]): GapSlot[] {
@@ -85,14 +85,14 @@ export function buildTimeline(blocks: WorkflowBlock[]): TimelineItem[] {
 }
 
 export function timeToMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
+  const parts = time.split(':').map(Number);
+  return parts[0] * 60 + parts[1];
 }
 
 export function minutesToTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
 }
 
 export function formatDuration(startTime: string, endTime: string): string {

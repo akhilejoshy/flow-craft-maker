@@ -13,21 +13,21 @@ const Dashboard: React.FC = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [expandedGap, setExpandedGap] = useState<string | null>(null);
 
-  const timeline = useMemo(() => buildTimeline(mockWorkflowBlocks), []);
-  const totalWork = useMemo(() => getTotalWorkTime(mockWorkflowBlocks), []);
+  const timeline = useMemo(() => buildTimeline(mockWorkflowBlocks), [date]);
+  const totalWork = useMemo(() => getTotalWorkTime(mockWorkflowBlocks), [date]);
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Workflow Activity Generator</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage and generate workflow activities</p>
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Workflow Activity Generator</h1>
+          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">Manage and generate workflow activities</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className={cn('w-[200px] justify-start text-left font-normal')}>
+              <Button variant="outline" className={cn('w-full sm:w-[200px] justify-start text-left font-normal')}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {format(date, 'PPP')}
               </Button>
@@ -36,7 +36,12 @@ const Dashboard: React.FC = () => {
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={(d) => d && setDate(d)}
+                onSelect={(d) => {
+                  if (d) {
+                    setDate(d);
+                    setExpandedGap(null);
+                  }
+                }}
                 initialFocus
                 className="p-3 pointer-events-auto"
               />
