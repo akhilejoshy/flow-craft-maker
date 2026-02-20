@@ -17,39 +17,45 @@ const Dashboard: React.FC = () => {
   const totalWork = useMemo(() => getTotalWorkTime(mockWorkflowBlocks), [date]);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Workflow Activity Generator</h1>
-          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">Manage and generate workflow activities</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className={cn('w-full sm:w-[200px] justify-start text-left font-normal')}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(date, 'PPP')}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-popover z-50" align="end">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(d) => {
-                  if (d) {
-                    setDate(d);
-                    setExpandedGap(null);
-                  }
-                }}
-                initialFocus
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-          <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-            <Clock className="h-3.5 w-3.5" />
-            {totalWork}
+    <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 sm:py-6">
+      {/* Compact toolbar */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Date Picker */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'w-full sm:w-auto justify-start text-left font-normal border-border bg-card text-foreground',
+                'hover:bg-accent/10 transition-colors'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+              <span className="font-medium">{format(date, 'EEE, MMM d yyyy')}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={(d) => {
+                if (d) {
+                  setDate(d);
+                  setExpandedGap(null);
+                }
+              }}
+              initialFocus
+              className="p-3 pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+
+        {/* Total Work Time pill */}
+        <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 self-start sm:self-auto">
+          <Clock className="h-4 w-4 text-primary" />
+          <div className="flex flex-col leading-none">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-primary/70">Total Work</span>
+            <span className="text-sm font-semibold text-primary">{totalWork}</span>
           </div>
         </div>
       </div>

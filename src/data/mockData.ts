@@ -93,6 +93,20 @@ export function minutesToTime(minutes: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
 }
 
+/** Parse HH:MM:SS → total seconds */
+export function timeToSeconds(time: string): number {
+  const parts = time.split(':').map(Number);
+  return (parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0);
+}
+
+/** Total seconds → HH:MM:SS */
+export function secondsToTime(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export function formatDuration(startTime: string, endTime: string): string {
   const diff = timeToMinutes(endTime) - timeToMinutes(startTime);
   const hours = Math.floor(diff / 60);
