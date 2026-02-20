@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
-import { Activity, LayoutDashboard, Image, LogOut, Menu, X } from 'lucide-react';
+import { Activity, LayoutDashboard, Image, LogOut, Menu, X, MoreVertical } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -12,7 +20,7 @@ const navItems = [
 const TopNav: React.FC = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -52,39 +60,50 @@ const TopNav: React.FC = () => {
           ))}
         </nav>
 
-        {/* Spacer on mobile */}
         <div className="flex-1 sm:hidden" />
 
-        {/* Desktop: user email + logout */}
-        <div className="hidden sm:flex items-center gap-3">
-          <span className="text-xs text-sidebar-foreground/60 truncate max-w-[160px]">{user?.email}</span>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent/50"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
+        {/* Three-dot more options (desktop) */}
+        <div className="hidden sm:flex items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 bg-popover border-border">
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal truncate">
+                {user?.email}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Mobile: hamburger */}
         <button
-          onClick={() => setMenuOpen((o) => !o)}
+          onClick={() => setMobileOpen((o) => !o)}
           className="sm:hidden flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
         >
-          {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
       </div>
 
       {/* Mobile dropdown menu */}
-      {menuOpen && (
+      {mobileOpen && (
         <div className="sm:hidden border-t border-sidebar-border bg-sidebar px-4 py-3 space-y-1">
           {navItems.map((item) => (
             <RouterNavLink
               key={item.to}
               to={item.to}
               end
-              onClick={() => setMenuOpen(false)}
+              onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full',
@@ -102,7 +121,7 @@ const TopNav: React.FC = () => {
             <p className="px-3 py-1 text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent/50"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
             >
               <LogOut className="h-4 w-4" />
               Sign out
