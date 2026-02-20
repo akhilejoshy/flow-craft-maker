@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Clock, AlertCircle } from 'lucide-react';
-import { GapSlot, formatDuration, timeToMinutes, minutesToTime, mockSubtasks } from '@/data/mockData';
+import { GapSlot, formatDuration, timeToSeconds, secondsToTime, mockSubtasks } from '@/data/mockData';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -24,28 +24,27 @@ interface SplitRow {
 
 interface TimePartInputProps {
   label: string;
-  /** absolute minutes from midnight */
-  valueMinutes: number;
-  min: number; // absolute minutes
-  max: number; // absolute minutes
-  onChange: (newMinutes: number) => void;
-  otherMinutes: number; // the other bound (for > / < validation)
-  mustBeGreaterThan?: boolean; // if true, value must be > otherMinutes
+  valueSecs: number;         // absolute seconds from midnight
+  minSecs: number;
+  maxSecs: number;
+  otherSecs: number;
+  mustBeGreaterThan: boolean;
+  onChange: (newSecs: number) => void;
 }
 
 const TimePartInput: React.FC<TimePartInputProps> = ({
-  label,
-  valueMinutes,
-  min,
-  max,
-  onChange,
-  otherMinutes,
-  mustBeGreaterThan,
+  label, valueSecs, minSecs, maxSecs, otherSecs, mustBeGreaterThan, onChange,
 }) => {
-  const totalSeconds = valueMinutes * 60;
-  const [hh, setHh] = useState(String(Math.floor(totalSeconds / 3600)).padStart(2, '0'));
-  const [mm, setMm] = useState(String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0'));
-  const [ss, setSs] = useState(String(totalSeconds % 60).padStart(2, '0'));
+  const toFields = (secs: number) => ({
+    hh: String(Math.floor(secs / 3600)).padStart(2, '0'),
+    mm: String(Math.floor((secs % 3600) / 60)).padStart(2, '0'),
+    ss: String(secs % 60).padStart(2, '0'),
+  });
+
+  const init = toFields(valueSecs);
+  const [hh, setHh] = useState(init.hh);
+  const [mm, setMm] = useState(init.mm);
+  const [ss, setSs] = useState(init.ss);
   const [errors, setErrors] = useState<{ hh?: string; mm?: string; ss?: string }>({});
 
   const hhRef = useRef<HTMLInputElement>(null);
@@ -62,35 +61,30 @@ const TimePartInput: React.FC<TimePartInputProps> = ({
     if (isNaN(m) || m < 0 || m > 59) errs.mm = '0-59';
     if (isNaN(s) || s < 0 || s > 59) errs.ss = '0-59';
 
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    setErrors({});
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
-    const totalMins = h * 60 + m; // seconds ignored for minute-level logic
-    if (totalMins < min || totalMins > max) {
-      // revert
-      const orig = valueMinutes * 60;
-      setHh(String(Math.floor(orig / 3600)).padStart(2, '0'));
-      setMm(String(Math.floor((orig % 3600) / 60)).padStart(2, '0'));
-      setSs(String(orig % 60).padStart(2, '0'));
-      setErrors({ hh: `${Math.floor(min / 60).toString().padStart(2, '0')}–${Math.floor(max / 60).toString().padStart(2, '0')}` });
+    const total = h * 3600 + m * 60 + s;
+
+    if (total < minSecs || total > maxSecs) {
+      setErrors({ hh: `out of range` });
+      const f = toFields(valueSecs);
+      setHh(f.hh); setMm(f.mm); setSs(f.ss);
       return;
     }
-    if (mustBeGreaterThan && totalMins <= otherMinutes) {
+    if (mustBeGreaterThan && total <= otherSecs) {
       setErrors({ mm: '> start' });
       return;
     }
-    if (!mustBeGreaterThan && totalMins >= otherMinutes) {
+    if (!mustBeGreaterThan && total >= otherSecs) {
       setErrors({ mm: '< end' });
       return;
     }
 
+    setErrors({});
     setHh(String(h).padStart(2, '0'));
     setMm(String(m).padStart(2, '0'));
     setSs(String(s).padStart(2, '0'));
-    onChange(totalMins);
+    onChange(total);
   };
 
   const fieldCls = (err?: string) =>
@@ -103,41 +97,29 @@ const TimePartInput: React.FC<TimePartInputProps> = ({
     <div className="space-y-1">
       <span className="text-xs text-muted-foreground">{label}</span>
       <div className="flex items-center gap-1">
+        {/* HH */}
         <div className="flex flex-col items-center gap-0.5">
-          <input
-            ref={hhRef}
-            className={fieldCls(errors.hh)}
-            value={hh}
-            maxLength={2}
-            placeholder="HH"
+          <input ref={hhRef} className={fieldCls(errors.hh)} value={hh} maxLength={2} placeholder="HH"
             onChange={(e) => setHh(e.target.value)}
             onBlur={() => commit(hh, mm, ss)}
-            onKeyDown={(e) => { if (e.key === 'Tab' || e.key === ':') { e.preventDefault(); mmRef.current?.focus(); } }}
+            onKeyDown={(e) => { if (e.key === ':' || e.key === 'ArrowRight') { e.preventDefault(); mmRef.current?.focus(); } }}
           />
           {errors.hh && <span className="text-[9px] text-destructive leading-none">{errors.hh}</span>}
         </div>
-        <span className="text-muted-foreground font-bold text-xs">:</span>
+        <span className="text-muted-foreground text-xs font-bold">:</span>
+        {/* MM */}
         <div className="flex flex-col items-center gap-0.5">
-          <input
-            ref={mmRef}
-            className={fieldCls(errors.mm)}
-            value={mm}
-            maxLength={2}
-            placeholder="MM"
+          <input ref={mmRef} className={fieldCls(errors.mm)} value={mm} maxLength={2} placeholder="MM"
             onChange={(e) => setMm(e.target.value)}
             onBlur={() => commit(hh, mm, ss)}
-            onKeyDown={(e) => { if (e.key === 'Tab' || e.key === ':') { e.preventDefault(); ssRef.current?.focus(); } }}
+            onKeyDown={(e) => { if (e.key === ':' || e.key === 'ArrowRight') { e.preventDefault(); ssRef.current?.focus(); } }}
           />
           {errors.mm && <span className="text-[9px] text-destructive leading-none">{errors.mm}</span>}
         </div>
-        <span className="text-muted-foreground font-bold text-xs">:</span>
+        <span className="text-muted-foreground text-xs font-bold">:</span>
+        {/* SS */}
         <div className="flex flex-col items-center gap-0.5">
-          <input
-            ref={ssRef}
-            className={fieldCls(errors.ss)}
-            value={ss}
-            maxLength={2}
-            placeholder="SS"
+          <input ref={ssRef} className={fieldCls(errors.ss)} value={ss} maxLength={2} placeholder="SS"
             onChange={(e) => setSs(e.target.value)}
             onBlur={() => commit(hh, mm, ss)}
           />
@@ -151,44 +133,45 @@ const TimePartInput: React.FC<TimePartInputProps> = ({
 // ─── GapCard ─────────────────────────────────────────────────────────────────
 
 const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
-  const gapStartMins = timeToMinutes(gap.startTime);
-  const gapEndMins = timeToMinutes(gap.endTime);
-  const gapMinutes = gapEndMins - gapStartMins;
+  const gapStartSecs = timeToSeconds(gap.startTime);
+  const gapEndSecs = timeToSeconds(gap.endTime);
+  const gapTotalSecs = gapEndSecs - gapStartSecs;
 
-  const [startMins, setStartMins] = useState(gapStartMins);
-  const [endMins, setEndMins] = useState(gapEndMins);
-  const [interval, setInterval] = useState(10);
+  const [startSecs, setStartSecs] = useState(gapStartSecs);
+  const [endSecs, setEndSecs] = useState(gapEndSecs);
+  const [intervalMins, setIntervalMins] = useState(10);
   const [subtask, setSubtask] = useState('');
   const [kbRange, setKbRange] = useState<[number, number]>([200, 800]);
   const [mouseRange, setMouseRange] = useState<[number, number]>([200, 800]);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<'success' | 'error' | null>(null);
 
-  const selectedDuration = endMins - startMins;
+  const selectedDurationSecs = endSecs - startSecs;
+  const selectedDurationMins = Math.floor(selectedDurationSecs / 60);
+  const intervalSecs = intervalMins * 60;
 
   const splits: SplitRow[] = useMemo(() => {
-    if (selectedDuration <= 0 || interval <= 0) return [];
+    if (selectedDurationSecs <= 0 || intervalSecs <= 0) return [];
     const rows: SplitRow[] = [];
-    const baseMin = startMins;
-    const endMin = endMins;
-    let current = baseMin;
+    let current = startSecs;
     let num = 1;
 
-    rows.push({ num, start: minutesToTime(baseMin), end: minutesToTime(baseMin) });
+    // First split: same start and end
+    rows.push({ num, start: secondsToTime(startSecs), end: secondsToTime(startSecs) });
     num++;
 
-    while (current < endMin) {
-      const splitEnd = Math.min(current + interval, endMin);
-      rows.push({ num, start: minutesToTime(current), end: minutesToTime(splitEnd) });
+    while (current < endSecs) {
+      const splitEnd = Math.min(current + intervalSecs, endSecs);
+      rows.push({ num, start: secondsToTime(current), end: secondsToTime(splitEnd) });
       current = splitEnd;
       num++;
     }
     return rows;
-  }, [startMins, endMins, interval]);
+  }, [startSecs, endSecs, intervalSecs]);
 
   const totalScreenshots = 12;
   const screenshotMatch = totalScreenshots >= splits.length;
-  const canSubmit = subtask && splits.length > 0 && screenshotMatch && selectedDuration > 0;
+  const canSubmit = subtask && splits.length > 0 && screenshotMatch && selectedDurationSecs > 0;
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -231,36 +214,38 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
           >
             <div className="space-y-4 border-t border-sidebar-border p-4">
 
-              {/* Row 1: Time Selection */}
+              {/* Time Selection */}
               <section className="space-y-2">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Time Selection</h4>
                 <div className="flex flex-wrap items-start gap-4">
                   <TimePartInput
                     label="Start Time"
-                    valueMinutes={startMins}
-                    min={gapStartMins}
-                    max={gapEndMins - 1}
-                    otherMinutes={endMins}
+                    valueSecs={startSecs}
+                    minSecs={gapStartSecs}
+                    maxSecs={gapEndSecs - 1}
+                    otherSecs={endSecs}
                     mustBeGreaterThan={false}
-                    onChange={(m) => setStartMins(m)}
+                    onChange={setStartSecs}
                   />
                   <TimePartInput
                     label="End Time"
-                    valueMinutes={endMins}
-                    min={gapStartMins + 1}
-                    max={gapEndMins}
-                    otherMinutes={startMins}
+                    valueSecs={endSecs}
+                    minSecs={gapStartSecs + 1}
+                    maxSecs={gapEndSecs}
+                    otherSecs={startSecs}
                     mustBeGreaterThan={true}
-                    onChange={(m) => setEndMins(m)}
+                    onChange={setEndSecs}
                   />
-                  <div className="flex flex-col justify-end self-end pb-1">
+                  <div className="self-end pb-1 space-y-0.5">
                     <span className="text-xs text-muted-foreground">Duration</span>
-                    <span className="text-sm font-semibold text-foreground">{selectedDuration}m</span>
+                    <p className="text-sm font-semibold text-foreground tabular-nums">
+                      {selectedDurationMins}m {selectedDurationSecs % 60}s
+                    </p>
                   </div>
                 </div>
               </section>
 
-              {/* Row 2: Interval + Subtask in one row */}
+              {/* Interval + Subtask */}
               <section className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Interval (min)</h4>
@@ -268,9 +253,9 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                     <Input
                       type="number"
                       min={1}
-                      max={gapMinutes}
-                      value={interval}
-                      onChange={(e) => setInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                      max={Math.ceil(gapTotalSecs / 60)}
+                      value={intervalMins}
+                      onChange={(e) => setIntervalMins(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-20 h-8 text-sm"
                     />
                     <span className="text-xs text-muted-foreground">{splits.length} splits</span>
@@ -292,7 +277,7 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                 </div>
               </section>
 
-              {/* Row 3: Activity Ranges (0–5000, dual thumb) */}
+              {/* Activity Ranges */}
               <section className="space-y-2">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Activity Ranges</h4>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -301,13 +286,8 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                       <label className="text-xs text-muted-foreground">Keyboard</label>
                       <span className="text-xs font-medium text-foreground tabular-nums">{kbRange[0]} – {kbRange[1]}</span>
                     </div>
-                    <Slider
-                      min={0}
-                      max={5000}
-                      step={10}
-                      value={kbRange}
-                      onValueChange={(v) => setKbRange([v[0], v[1]])}
-                    />
+                    <Slider min={0} max={5000} step={10} value={kbRange}
+                      onValueChange={(v) => setKbRange([v[0], v[1]])} />
                     <div className="flex justify-between text-[10px] text-muted-foreground">
                       <span>0</span><span>5000</span>
                     </div>
@@ -317,13 +297,8 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                       <label className="text-xs text-muted-foreground">Mouse</label>
                       <span className="text-xs font-medium text-foreground tabular-nums">{mouseRange[0]} – {mouseRange[1]}</span>
                     </div>
-                    <Slider
-                      min={0}
-                      max={5000}
-                      step={10}
-                      value={mouseRange}
-                      onValueChange={(v) => setMouseRange([v[0], v[1]])}
-                    />
+                    <Slider min={0} max={5000} step={10} value={mouseRange}
+                      onValueChange={(v) => setMouseRange([v[0], v[1]])} />
                     <div className="flex justify-between text-[10px] text-muted-foreground">
                       <span>0</span><span>5000</span>
                     </div>
@@ -331,7 +306,7 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                 </div>
               </section>
 
-              {/* Row 4: Split Preview */}
+              {/* Split Preview */}
               {splits.length > 0 && (
                 <section className="space-y-1.5">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Split Preview</h4>
@@ -358,7 +333,7 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                 </section>
               )}
 
-              {/* Row 5: Screenshot Status */}
+              {/* Screenshot Status */}
               <section>
                 <div className={cn(
                   'flex items-center gap-2 rounded-lg border px-3 py-2 text-xs',
@@ -374,7 +349,7 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                 </div>
               </section>
 
-              {/* Row 6: Submit */}
+              {/* Submit */}
               <section className="flex items-center gap-3">
                 <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || submitting}>
                   {submitting ? 'Submitting...' : 'Submit Activity'}
