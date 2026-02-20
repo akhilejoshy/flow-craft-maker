@@ -83,11 +83,11 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
   };
 
   return (
-    <div className="rounded-xl border border-gap-border bg-gap overflow-hidden">
+    <div className="rounded-xl border border-sidebar-border bg-sidebar-accent overflow-hidden">
       {/* Collapsed header */}
       <button
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gap-border/20"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-sidebar-border/30"
       >
         <div className="flex items-center gap-3">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-warning/10">
@@ -113,7 +113,7 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="space-y-5 border-t border-gap-border p-4">
+            <div className="space-y-5 border-t border-sidebar-border p-4">
               {/* Section 1: Time Selection */}
               <section className="space-y-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Time Selection</h4>
