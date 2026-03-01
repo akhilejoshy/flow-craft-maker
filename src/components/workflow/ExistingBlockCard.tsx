@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock, CheckCircle2 } from 'lucide-react';
-import { WorkflowBlock, formatDuration } from '@/data/mockData';
+import { formatDuration } from '@/data/mockData';
+import { WorkflowBlock } from '@/store/slices/workFlow';
 
 interface Props {
   block: WorkflowBlock;

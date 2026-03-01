@@ -8,7 +8,7 @@ export function createMainWindow(currentDir) {
     if (win) return;
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-    const WIDTH = 825
+    const WIDTH = 480
     const HEIGHT = 720
     const xPos = screenWidth - WIDTH - 10;
     const yPos = screenHeight - HEIGHT - 50;
@@ -19,6 +19,7 @@ export function createMainWindow(currentDir) {
         y: yPos,
         frame: true,
         titleBarStyle: 'default',
+        icon: path.join(currentDir, 'icon.png'),
         // maximizable: false,
         // resizable: false,
         webPreferences: {

@@ -11,7 +11,7 @@
     "start": "concurrently \"npm run start-react\" \"npm run start-electron\"",
     "dev": "vite",
     "start-react": "npm run dev",
-    "start-electron": "wait-on tcp:5173 && cross-env ELECTRON_START_URL=http://localhost:5173 electron electron/main.js",
+    "start-electron": "wait-on tcp:5174 && cross-env ELECTRON_START_URL=http://localhost:5174 electron electron/main.js",
     "build-react": "vite build",
     "dist": "npm run build-react && electron-builder",
     "preview": "vite preview"
@@ -45,6 +45,7 @@
     "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
+    "@reduxjs/toolkit": "^2.11.2",
     "@tanstack/react-query": "^5.83.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -59,6 +60,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.61.1",
+    "react-redux": "^9.2.0",
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^6.30.1",
     "recharts": "^2.15.4",
@@ -94,15 +96,18 @@
     "appId": "com.workflow.desktop",
     "productName": "Workflow",
     "directories": {
-      "output": "release"
+      "output": "dist"
     },
     "files": [
       "electron/**/*",
       "dist/**/*",
-      "package.json"
+      "package.json",
+      "icon.ico",
+      "icon.png"
     ],
     "win": {
-      "target": "nsis"
+       "target": "nsis",
+      "icon": "icon.ico"
     },
     "mac": {
       "target": "dmg"
@@ -112,7 +117,8 @@
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "icon.png"
     }
   }
 }

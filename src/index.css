@@ -1,7 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Force dark theme globally */
-html { color-scheme: dark; }
+html {
+  color-scheme: dark;
+}
 
 @tailwind base;
 @tailwind components;
@@ -9,8 +11,8 @@ html { color-scheme: dark; }
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    --background: 510 20% 98%;
+    --foreground: 422 47% 11%;
 
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -63,50 +65,60 @@ html { color-scheme: dark; }
   }
 
   .dark {
-    --background: 222 47% 6%;
+    /* Core Backgrounds - True Black/Near Black */
+    --background: 0 0% 2%;
+    /* Deepest black */
     --foreground: 210 40% 98%;
-    --card: 222 47% 9%;
+
+    --card: 0 0% 4%;
+    /* Slightly lighter than bg for depth */
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
+
+    --popover: 0 0% 4%;
     --popover-foreground: 210 40% 98%;
+
+    /* Sidebar - Distinguishable but very dark */
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 215 20% 75%;
+    --accent: 217 33% 17%;
+    --sidebar-border: 0 0% 10%;
+
+    /* Borders & Inputs - Low contrast for a sleek look */
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Primary & Accents - Kept blue but vibrant against black */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --accent: 0 0% 10%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 213 27% 84%;
-    --sidebar-background: 222 47% 5%;
-    --sidebar-foreground: 215 20% 75%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 40% 10%;
-    --sidebar-accent-foreground: 215 20% 85%;
-    --sidebar-border: 222 40% 12%;
-    --sidebar-ring: 217 91% 60%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --block: 217 40% 12%;
-    --block-border: 217 40% 20%;
-    --block-foreground: 217 40% 70%;
-    --gap: 38 40% 12%;
-    --gap-border: 38 40% 22%;
-    --gap-foreground: 38 40% 70%;
+
+    /* Workflow Specifics - Adjusted for higher contrast on black */
+    --block: 217 40% 8%;
+    /* Darker blue-grey */
+    --block-border: 217 40% 18%;
+    --block-foreground: 217 40% 80%;
+
+    --gap: 38 40% 8%;
+    /* Darker amber/gold */
+    --gap-border: 38 40% 18%;
+    --gap-foreground: 38 40% 80%;
+
+    --ring: 0 0% 20%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    /* 🔥 IMPORTANT */
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
@@ -114,8 +126,12 @@ html { color-scheme: dark; }
 }
 
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) transparent;
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

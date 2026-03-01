@@ -1,10 +1,4 @@
-export interface WorkflowBlock {
-  id: string;
-  startTime: string; // HH:mm:ss
-  endTime: string;   // HH:mm:ss
-  subtask: string;
-  type: 'existing';
-}
+import type { WorkflowBlock } from "@/store/slices/workFlow";
 
 export interface GapSlot {
   id: string;
@@ -13,53 +7,18 @@ export interface GapSlot {
   type: 'gap';
 }
 
+function extractTime(iso: string): string {
+  return new Date(iso).toTimeString().split(" ")[0]; // HH:mm:ss
+}
+
 export type TimelineItem = WorkflowBlock | GapSlot;
 
-export interface Subtask {
-  id: string;
-  name: string;
-}
-
-export const mockSubtasks: Subtask[] = [
-  { id: '1', name: 'Code Review' },
-  { id: '2', name: 'Feature Development' },
-  { id: '3', name: 'Bug Fixing' },
-  { id: '4', name: 'Documentation' },
-  { id: '5', name: 'Testing & QA' },
-  { id: '6', name: 'Design Review' },
-  { id: '7', name: 'Sprint Planning' },
-  { id: '8', name: 'Standup Meeting' },
-  { id: '9', name: 'Client Communication' },
-  { id: '10', name: 'Database Migration' },
-];
-
-export const mockWorkflowBlocks: WorkflowBlock[] = [
-  { id: 'b1', startTime: '09:00:00', endTime: '09:45:00', subtask: 'Standup Meeting', type: 'existing' },
-  { id: 'b2', startTime: '10:30:00', endTime: '12:00:00', subtask: 'Feature Development', type: 'existing' },
-  { id: 'b3', startTime: '13:00:00', endTime: '14:30:00', subtask: 'Code Review', type: 'existing' },
-  { id: 'b4', startTime: '15:00:00', endTime: '16:00:00', subtask: 'Bug Fixing', type: 'existing' },
-  { id: 'b5', startTime: '16:30:00', endTime: '17:30:00', subtask: 'Documentation', type: 'existing' },
-];
-
-function timeToSeconds(time: string): number {
-  const [h, m, s] = time.split(":").map(Number);
-  return h * 3600 + m * 60 + s;
-}
-
-function secondsToTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-
-  return [h, m, s]
-    .map(v => v.toString().padStart(2, "0"))
-    .join(":");
-}
-
 export function buildTimeline(blocks: WorkflowBlock[]): TimelineItem[] {
+  if (blocks.length === 0) return [];
   const sorted = [...blocks].sort((a, b) => a.startTime.localeCompare(b.startTime));
   const timeline: TimelineItem[] = [];
-
+  const DAY_END = 86395; // 23:59:55 (adjusting for your 5s buffer)
+  
   for (let i = 0; i < sorted.length; i++) {
     timeline.push(sorted[i]);
     if (i < sorted.length - 1) {
@@ -77,6 +36,15 @@ export function buildTimeline(blocks: WorkflowBlock[]): TimelineItem[] {
         });
       }
     }
+  }
+  const lastBlockEnd = timeToSeconds(sorted[sorted.length - 1].endTime);
+  if (lastBlockEnd < DAY_END) {
+    timeline.push({
+      id: 'gap-after-last',
+      startTime: secondsToTime(lastBlockEnd + 5),
+      endTime: '23:59:55', // Or use secondsToTime(DAY_END)
+      type: 'gap',
+    });
   }
 
   return timeline;
@@ -108,12 +76,25 @@ export function secondsToTime(secs: number): string {
 }
 
 export function formatDuration(startTime: string, endTime: string): string {
-  const diff = timeToMinutes(endTime) - timeToMinutes(startTime);
-  const hours = Math.floor(diff / 60);
-  const mins = diff % 60;
-  if (hours === 0) return `${mins}m`;
-  if (mins === 0) return `${hours}h`;
-  return `${hours}h ${mins}m`;
+  const toSeconds = (time: string) => {
+    const [h, m, s] = time.split(":").map(Number);
+    return h * 3600 + m * 60 + s;
+  };
+
+  let diff = toSeconds(endTime) - toSeconds(startTime);
+
+  // Handle crossing midnight
+  if (diff < 0) {
+    diff += 24 * 3600;
+  }
+
+  const hours = Math.floor(diff / 3600);
+  const minutes = Math.floor((diff % 3600) / 60);
+  const seconds = diff % 60;
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
+
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
 export function getTotalWorkTime(blocks: WorkflowBlock[]): string {

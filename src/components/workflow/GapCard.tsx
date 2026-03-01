@@ -1,17 +1,30 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Clock, AlertCircle } from 'lucide-react';
-import { GapSlot, formatDuration, timeToSeconds, secondsToTime, mockSubtasks } from '@/data/mockData';
+import { GapSlot, formatDuration, timeToSeconds, secondsToTime } from '@/data/mockData';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import type { Subtask } from "@/store/slices/workFlow";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { submitActivity, ActivityPayload } from "@/store/slices/workFlow"
+import { date } from 'zod';
+import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+
+
 
 interface Props {
   gap: GapSlot;
   isExpanded: boolean;
   onToggle: () => void;
+  kbRange: [number, number];
+  setKbRange: React.Dispatch<React.SetStateAction<[number, number]>>;
+  mouseRange: [number, number];
+  setMouseRange: React.Dispatch<React.SetStateAction<[number, number]>>;
+  subtasks: Subtask[];
+  date: string;
 }
 
 interface SplitRow {
@@ -41,114 +54,193 @@ const TimePartInput: React.FC<TimePartInputProps> = ({
     ss: String(secs % 60).padStart(2, '0'),
   });
 
-  const init = toFields(valueSecs);
-  const [hh, setHh] = useState(init.hh);
-  const [mm, setMm] = useState(init.mm);
-  const [ss, setSs] = useState(init.ss);
+  const [hh, setHh] = useState(toFields(valueSecs).hh);
+  const [mm, setMm] = useState(toFields(valueSecs).mm);
+  const [ss, setSs] = useState(toFields(valueSecs).ss);
   const [errors, setErrors] = useState<{ hh?: string; mm?: string; ss?: string }>({});
 
-  const hhRef = useRef<HTMLInputElement>(null);
-  const mmRef = useRef<HTMLInputElement>(null);
-  const ssRef = useRef<HTMLInputElement>(null);
+  // Sync state if the parent forces a new value (e.g., when a different gap is clicked)
+  useEffect(() => {
+    const f = toFields(valueSecs);
+    setHh(f.hh); setMm(f.mm); setSs(f.ss);
+    setErrors({});
+  }, [valueSecs]);
 
-  const commit = (newHh: string, newMm: string, newSs: string) => {
+  const validateAndSave = (newHh: string, newMm: string, newSs: string) => {
     const h = parseInt(newHh, 10);
     const m = parseInt(newMm, 10);
     const s = parseInt(newSs, 10);
     const errs: { hh?: string; mm?: string; ss?: string } = {};
 
+    // 1. Basic format validation (always enforced)
     if (isNaN(h) || h < 0 || h > 23) errs.hh = '0-23';
     if (isNaN(m) || m < 0 || m > 59) errs.mm = '0-59';
     if (isNaN(s) || s < 0 || s > 59) errs.ss = '0-59';
 
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
 
     const total = h * 3600 + m * 60 + s;
 
+    // 2. Logic Validation (Start < End and Gap Range)
+    // IMPORTANT: We do NOT snap back here. We just set the error.
     if (total < minSecs || total > maxSecs) {
-      setErrors({ hh: `out of range` });
-      const f = toFields(valueSecs);
-      setHh(f.hh); setMm(f.mm); setSs(f.ss);
+      setErrors({ hh: 'out of range' });
       return;
     }
+
     if (mustBeGreaterThan && total <= otherSecs) {
       setErrors({ mm: '> start' });
       return;
     }
+
     if (!mustBeGreaterThan && total >= otherSecs) {
       setErrors({ mm: '< end' });
       return;
     }
 
+    // 3. Success: clear errors and tell parent
     setErrors({});
-    setHh(String(h).padStart(2, '0'));
-    setMm(String(m).padStart(2, '0'));
-    setSs(String(s).padStart(2, '0'));
     onChange(total);
   };
 
   const fieldCls = (err?: string) =>
     cn(
-      'w-12 text-center tabular-nums text-sm bg-background border rounded px-1 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring transition-colors',
-      err ? 'border-destructive text-destructive' : 'border-input text-foreground'
+      'w-12 text-center tabular-nums text-sm bg-background border rounded px-1 py-1.5 focus:outline-none focus:ring-2 transition-all',
+      err
+        ? 'border-destructive ring-destructive/20 text-destructive'
+        : 'border-input text-foreground focus:ring-primary/20 focus:border-primary'
     );
 
   return (
-    <div className="space-y-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1">
-        {/* HH */}
-        <div className="flex flex-col items-center gap-0.5">
-          <input ref={hhRef} className={fieldCls(errors.hh)} value={hh} maxLength={2} placeholder="HH"
-            onChange={(e) => setHh(e.target.value)}
-            onBlur={() => commit(hh, mm, ss)}
-            onKeyDown={(e) => { if (e.key === ':' || e.key === 'ArrowRight') { e.preventDefault(); mmRef.current?.focus(); } }}
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between px-0.5">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">{label}</span>
+      </div>
+
+      <div className="flex items-center gap-1.5 p-1 rounded-md bg-muted/30 border border-transparent">
+        <div className="flex flex-col items-center">
+          <input
+            className={fieldCls(errors.hh)}
+            value={hh}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+              setHh(val);
+              validateAndSave(val, mm, ss); // Try to save as they type
+            }}
+            onBlur={() => {
+              // Pad with zero on blur for cleanliness
+              const padded = hh.padStart(2, '0');
+              setHh(padded);
+              validateAndSave(padded, mm, ss);
+            }}
           />
-          {errors.hh && <span className="text-[9px] text-destructive leading-none">{errors.hh}</span>}
         </div>
-        <span className="text-muted-foreground text-xs font-bold">:</span>
-        {/* MM */}
-        <div className="flex flex-col items-center gap-0.5">
-          <input ref={mmRef} className={fieldCls(errors.mm)} value={mm} maxLength={2} placeholder="MM"
-            onChange={(e) => setMm(e.target.value)}
-            onBlur={() => commit(hh, mm, ss)}
-            onKeyDown={(e) => { if (e.key === ':' || e.key === 'ArrowRight') { e.preventDefault(); ssRef.current?.focus(); } }}
+
+        <span className="text-muted-foreground/50 text-xs font-medium">:</span>
+
+        <div className="flex flex-col items-center">
+          <input
+            className={fieldCls(errors.mm || errors.hh === 'out of range' ? 'err' : undefined)}
+            value={mm}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+              setMm(val);
+              validateAndSave(hh, val, ss);
+            }}
+            onBlur={() => {
+              const padded = mm.padStart(2, '0');
+              setMm(padded);
+              validateAndSave(hh, padded, ss);
+            }}
           />
-          {errors.mm && <span className="text-[9px] text-destructive leading-none">{errors.mm}</span>}
         </div>
-        <span className="text-muted-foreground text-xs font-bold">:</span>
-        {/* SS */}
-        <div className="flex flex-col items-center gap-0.5">
-          <input ref={ssRef} className={fieldCls(errors.ss)} value={ss} maxLength={2} placeholder="SS"
-            onChange={(e) => setSs(e.target.value)}
-            onBlur={() => commit(hh, mm, ss)}
+
+        <span className="text-muted-foreground/50 text-xs font-medium">:</span>
+
+        <div className="flex flex-col items-center">
+          <input
+            className={fieldCls(errors.ss)}
+            value={ss}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+              setSs(val);
+              validateAndSave(hh, mm, val);
+            }}
+            onBlur={() => {
+              const padded = ss.padStart(2, '0');
+              setSs(padded);
+              validateAndSave(hh, mm, padded);
+            }}
           />
-          {errors.ss && <span className="text-[9px] text-destructive leading-none">{errors.ss}</span>}
         </div>
+      </div>
+
+      {/* Show detailed error message below the inputs */}
+      <div className="h-3">
+        {Object.values(errors).map((err, i) => (
+          <span key={i} className="text-[10px] text-destructive font-medium block leading-none animate-in fade-in slide-in-from-top-1">
+            {err === 'out of range' ? `Must be between ${toFields(minSecs).hh}:${toFields(minSecs).mm} and ${toFields(maxSecs).hh}:${toFields(maxSecs).mm}` : err}
+          </span>
+        ))}
       </div>
     </div>
   );
 };
-
 // ─── GapCard ─────────────────────────────────────────────────────────────────
 
-const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
+const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle, kbRange, setKbRange, mouseRange, setMouseRange, subtasks, date }) => {
+  const screenshots = window.electronAPI.getScreenshots('screenshots'); // relative to project root
+  // ["C:/project/screenshots/shot1.png", ...]
   const gapStartSecs = timeToSeconds(gap.startTime);
   const gapEndSecs = timeToSeconds(gap.endTime);
   const gapTotalSecs = gapEndSecs - gapStartSecs;
-
+  const dispatch = useAppDispatch()
   const [startSecs, setStartSecs] = useState(gapStartSecs);
   const [endSecs, setEndSecs] = useState(gapEndSecs);
-  const [intervalMins, setIntervalMins] = useState(10);
+  // Inside your component
+  const [splitStatuses, setSplitStatuses] = useState<Record<number, 'pending' | 'loading' | 'success' | 'error'>>({});
+  const [currentSubmitCount, setCurrentSubmitCount] = useState(0);
+  const { activityPeriod, taskActivities } = useAppSelector(
+    (state) => state.workFlow
+  )
+  const handleTimeChange = (newSecs: number, type: 'start' | 'end') => {
+    if (type === 'start') {
+      // Only block if Start tries to go past the actual End selection
+      if (newSecs < endSecs) {
+        setStartSecs(newSecs);
+      }
+    } else {
+      // Only block if End tries to go before the Start selection
+      if (newSecs > startSecs) {
+        setEndSecs(newSecs);
+      }
+    }
+  };
+  const [intervalMins, setIntervalMins] = useState<number | "">("")
+
+  useEffect(() => {
+    if (activityPeriod !== null && activityPeriod !== undefined) {
+      setIntervalMins(Math.floor(activityPeriod / 60))
+    }
+  }, [activityPeriod])
+
+  const intervalSecs =
+    typeof intervalMins === "number" ? intervalMins * 60 : 0;
   const [subtask, setSubtask] = useState('');
-  const [kbRange, setKbRange] = useState<[number, number]>([200, 800]);
-  const [mouseRange, setMouseRange] = useState<[number, number]>([200, 800]);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<'success' | 'error' | null>(null);
+  const [selectedSubtaskId, setSelectedSubtaskId] = useState<string | "">("");
 
   const selectedDurationSecs = endSecs - startSecs;
+
+  const hours = Math.floor(selectedDurationSecs / 3600);
+  const minutes = Math.floor((selectedDurationSecs % 3600) / 60);
+  const seconds = selectedDurationSecs % 60;
   const selectedDurationMins = Math.floor(selectedDurationSecs / 60);
-  const intervalSecs = intervalMins * 60;
+
 
   const splits: SplitRow[] = useMemo(() => {
     if (selectedDurationSecs <= 0 || intervalSecs <= 0) return [];
@@ -169,9 +261,10 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
     return rows;
   }, [startSecs, endSecs, intervalSecs]);
 
-  const totalScreenshots = 12;
+  const totalScreenshots = screenshots.length;
   const screenshotMatch = totalScreenshots >= splits.length;
-  const canSubmit = subtask && splits.length > 0 && screenshotMatch && selectedDurationSecs > 0;
+
+  const canSubmit = selectedSubtaskId && splits.length > 0 && screenshotMatch && selectedDurationSecs > 0;
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -179,6 +272,128 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
     await new Promise((r) => setTimeout(r, 1500));
     setSubmitResult('success');
     setSubmitting(false);
+  };
+
+  const convertToIST = (hhmmss: string, date: string) => {
+    // 'date' like '2026-02-20'
+    const [h, m, s] = hhmmss.split(":").map(Number);
+
+    // Create a Date object in local time
+    const dt = new Date(date);
+    dt.setHours(h, m, s, 0); // set milliseconds to 0
+
+    const pad = (n: number) => n.toString().padStart(2, "0");
+
+    // Just format as YYYY-MM-DDTHH:MM:SS+05:30 without changing the time
+    const istStr = `${pad(dt.getFullYear())}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}+05:30`;
+
+    return istStr;
+  };
+
+  const submitGeneratedActivities = async () => {
+    setSubmitting(true);
+    setSubmitResult(null);
+    setCurrentSubmitCount(0);
+
+    // Initialize all visible splits as pending
+    const initialStatuses: Record<number, 'pending' | 'loading' | 'success' | 'error'> = {};
+    splits.forEach(s => initialStatuses[s.num] = 'pending');
+    setSplitStatuses(initialStatuses);
+    let hasError = false;
+    try {
+      if (!taskActivities?.length) {
+        throw new Error("No task activities found");
+      }
+
+      // 1️⃣ Find matched task activity
+      const matched = taskActivities.find(
+        (t) => t.sub_task_id === Number(selectedSubtaskId)
+      );
+
+      if (!matched) {
+        throw new Error("Selected subtask not found");
+      }
+
+      const taskActivityId = matched.id;
+      const workDiaryId = matched.work_diary_id;
+
+      // 2️⃣ Helpers
+      const toSeconds = (time: string) => {
+        const [h, m, s] = time.split(":").map(Number);
+        return h * 3600 + m * 60 + s;
+      };
+
+      const toHHMMSS = (secs: number) => {
+        const h = String(Math.floor(secs / 3600)).padStart(2, "0");
+        const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
+        const s = String(secs % 60).padStart(2, "0");
+        return `${h}:${m}:${s}`;
+      };
+
+      if (!screenshots || screenshots.length < splits.length) {
+        throw new Error("Not enough screenshots for generated splits");
+      }
+
+      // 4️⃣ Shuffle screenshots
+      const shuffledImages = [...screenshots].sort(() => 0.5 - Math.random());
+
+      for (let i = 0; i < splits.length; i++) {
+        const split = splits[i];
+
+        // Mark current row as loading
+        setSplitStatuses(prev => ({ ...prev, [split.num]: 'loading' }));
+        setCurrentSubmitCount(i + 1);
+
+        try {
+          const keyboard = Math.floor(Math.random() * (kbRange[1] - kbRange[0] + 1)) + kbRange[0];
+          const mouse = Math.floor(Math.random() * (mouseRange[1] - mouseRange[0] + 1)) + mouseRange[0];
+
+          const payload = {
+            work_diary_id: workDiaryId,
+            task_activity_id: taskActivityId,
+            keyboard_action: keyboard,
+            mouse_action: mouse,
+            start_time: convertToIST(split.start, date),
+            end_time: convertToIST(split.end, date)
+          };
+
+          const formData = new FormData();
+          formData.append("data", JSON.stringify(payload));
+
+          const fileBuffer = window.electronAPI.readFileAsBuffer(shuffledImages[i].fullPath);
+          formData.append("image", new Blob([fileBuffer]), shuffledImages[i].name);
+
+          // Dispatch and wait
+          await dispatch(submitActivity(formData)).unwrap();
+
+          // Mark as success
+          setSplitStatuses(prev => ({ ...prev, [split.num]: 'success' }));
+        } catch (err) {
+          // Mark as error
+          hasError = true;
+          setSplitStatuses(prev => ({ ...prev, [split.num]: 'error' }));
+          console.error(`Split ${split.num} failed:`, err);
+          // If you want to stop the whole process on one error, throw here
+        }
+      }
+
+      // 4️⃣ Only log success and set state if NO errors occurred
+      if (!hasError) {
+        setSubmitResult('success');
+        console.log("All activities submitted successfully");
+        // setTimeout(() => {
+        //   window.location.reload();
+        // }, 1500);
+      } else {
+        setSubmitResult('error');
+        console.error("Some activities failed to submit.");
+      }
+    } catch (error: any) {
+      setSubmitResult('error');
+      console.error("Submission failed:", error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -193,9 +408,14 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
             <Clock className="h-3 w-3 text-warning" />
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">Available Time Slot</p>
+            <div className='flex  gap-4'>
+              <p className="text-sm font-medium text-foreground">Available Time Slot</p>
+              <span className="shrink-0 rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                {formatDuration(gap.startTime, gap.endTime)}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">
-              {gap.startTime} → {gap.endTime} · {formatDuration(gap.startTime, gap.endTime)}
+              {gap.startTime} → {gap.endTime}
             </p>
           </div>
         </div>
@@ -212,12 +432,24 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="space-y-4 border-t border-sidebar-border p-4">
+            <div className="space-y-4 border-t border-sidebar-border p-4 ">
 
               {/* Time Selection */}
-              <section className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Time Selection</h4>
-                <div className="flex flex-wrap items-start gap-4">
+              <section className="space-y-3 mb-5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Time Selection
+                  </h4>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Duration</span>
+                    <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary tabular-nums">
+                      {hours > 0 && `${hours}h `}
+                      {minutes}m {seconds}s
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-center items-start gap-10">
                   <TimePartInput
                     label="Start Time"
                     valueSecs={startSecs}
@@ -236,12 +468,6 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                     mustBeGreaterThan={true}
                     onChange={setEndSecs}
                   />
-                  <div className="self-end pb-1 space-y-0.5">
-                    <span className="text-xs text-muted-foreground">Duration</span>
-                    <p className="text-sm font-semibold text-foreground tabular-nums">
-                      {selectedDurationMins}m {selectedDurationSecs % 60}s
-                    </p>
-                  </div>
                 </div>
               </section>
 
@@ -255,25 +481,51 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                       min={1}
                       max={Math.ceil(gapTotalSecs / 60)}
                       value={intervalMins}
-                      onChange={(e) => setIntervalMins(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={(e) => {
+                        const value = e.target.value
+
+                        // Allow clearing
+                        if (value === "") {
+                          setIntervalMins("")
+                          return
+                        }
+
+                        const parsed = parseInt(value)
+                        const max = Math.ceil(gapTotalSecs / 60)
+
+                        // Invalid cases → reset to empty (show Required)
+                        if (isNaN(parsed) || parsed < 1 || parsed > max) {
+                          setIntervalMins("")
+                          return
+                        }
+
+                        // Valid number
+                        setIntervalMins(parsed)
+                      }}
                       className="w-20 h-8 text-sm"
                     />
+
                     <span className="text-xs text-muted-foreground">{splits.length} splits</span>
                   </div>
+                  {intervalMins === "" && (
+                    <p className="text-[10px] text-destructive">Required</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Subtask</h4>
-                  <Select value={subtask} onValueChange={setSubtask}>
+                  <Select value={selectedSubtaskId} onValueChange={setSelectedSubtaskId}>
                     <SelectTrigger className="bg-card h-8 text-sm">
                       <SelectValue placeholder="Choose..." />
                     </SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {mockSubtasks.map((s) => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      {subtasks.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {!subtask && <p className="text-[10px] text-destructive">Required</p>}
+                  {!selectedSubtaskId && <p className="text-[10px] text-destructive">Required</p>}
                 </div>
               </section>
 
@@ -310,13 +562,14 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
               {splits.length > 0 && (
                 <section className="space-y-1.5">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Split Preview</h4>
-                  <div className="max-h-40 overflow-auto rounded-lg border border-border scrollbar-thin">
+                  <div className="max-h-40 overflow-auto no-scrollbar rounded-lg border border-border">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-border bg-muted/40 sticky top-0">
+                        <tr className="sticky top-0 z-10 border-b border-border bg-muted/60 backdrop-blur-md">
                           <th className="px-3 py-1.5 text-left text-xs font-medium text-muted-foreground">#</th>
                           <th className="px-3 py-1.5 text-left text-xs font-medium text-muted-foreground">Start</th>
                           <th className="px-3 py-1.5 text-left text-xs font-medium text-muted-foreground">End</th>
+                          <th className="px-3 py-1.5 text-left text-xs font-medium text-muted-foreground text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -325,6 +578,12 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
                             <td className="px-3 py-1 text-muted-foreground">{s.num}</td>
                             <td className="px-3 py-1 font-medium text-foreground tabular-nums">{s.start}</td>
                             <td className="px-3 py-1 font-medium text-foreground tabular-nums">{s.end}</td>
+                            <td className="px-3 py-1 flex justify-center">
+                              {splitStatuses[s.num] === 'loading' && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                              {splitStatuses[s.num] === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                              {splitStatuses[s.num] === 'error' && <XCircle className="h-4 w-4 text-destructive" />}
+                              {!splitStatuses[s.num] || splitStatuses[s.num] === 'pending' && <div className="h-4 w-4 rounded-full border border-muted" />}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -351,11 +610,16 @@ const GapCard: React.FC<Props> = ({ gap, isExpanded, onToggle }) => {
 
               {/* Submit */}
               <section className="flex items-center gap-3">
-                <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || submitting}>
-                  {submitting ? 'Submitting...' : 'Submit Activity'}
+                <Button size="sm" onClick={submitGeneratedActivities} disabled={!canSubmit || submitting}>
+                  {submitting ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Submitting {currentSubmitCount}/{splits.length}
+                    </span>
+                  ) : 'Submit Activity'}
                 </Button>
-                {submitResult === 'success' && <span className="text-xs text-success">Submitted!</span>}
-                {submitResult === 'error' && <span className="text-xs text-destructive">Failed. Try again.</span>}
+                {submitResult === 'success' && <span className="text-xs text-green-500 font-medium">All Activities Submitted!</span>}
+                {submitResult === 'error' && <span className="text-xs text-destructive">Failed to submit activities.</span>}
               </section>
 
             </div>
