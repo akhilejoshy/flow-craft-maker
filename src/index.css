@@ -135,3 +135,20 @@ html {
     display: none;
   }
 }
+
+
+.rdp-day_hasEntry {
+  position: relative;
+}
+
+.rdp-day_hasEntry::after {
+  content: "";
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  background-color: #22c55e;
+  border-radius: 9999px;
+}

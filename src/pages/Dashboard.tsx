@@ -9,7 +9,7 @@ import { buildTimeline, getTotalWorkTime } from '@/data/mockData';
 import ExistingBlockCard from '@/components/workflow/ExistingBlockCard';
 import GapCard from '@/components/workflow/GapCard';
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchDailyWorkflow, fetchActivityPeriod } from "@/store/slices/workFlow"
+import { fetchDailyWorkflow, fetchActivityPeriod, fetchWorkDiaryDates } from "@/store/slices/workFlow"
 
 
 
@@ -20,12 +20,17 @@ const Dashboard: React.FC = () => {
 
 
 
-  const { workflow, subtasks, totalWorkTime } = useAppSelector((state) => state.workFlow);
+  const { workflow, subtasks, totalWorkTime, diaryDates } = useAppSelector((state) => state.workFlow);
   const timeline = buildTimeline(workflow);
 
   // const timeline = useMemo(() => buildTimeline(mockWorkflowBlocks), [date]);
   const totalWork = useMemo(() => getTotalWorkTime(workflow), [workflow]);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState<Date>(date);
+  const highlightedDates = diaryDates.map((d) => new Date(d));
+
+  console.log(diaryDates)
+  console.log(highlightedDates)
 
 
   const [kbRange, setKbRange] = useState<[number, number]>(() => {
@@ -49,6 +54,9 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const formattedDate = format(date, "yyyy-MM-dd");
     dispatch(fetchDailyWorkflow(formattedDate))
+      .unwrap()
+      .catch((err) => console.error(err));
+    dispatch(fetchWorkDiaryDates())
       .unwrap()
       .catch((err) => console.error(err));
     dispatch(fetchActivityPeriod(formattedDate))
@@ -79,12 +87,24 @@ const Dashboard: React.FC = () => {
             <Calendar
               mode="single"
               selected={date}
+              month={visibleMonth}
+              onMonthChange={setVisibleMonth}
               onSelect={(d) => {
                 if (d) {
                   setDate(d);
+                  setVisibleMonth(d);
                   setExpandedGap(null);
-                  setDatePopoverOpen(false); // ✅ close the popover
+                  setDatePopoverOpen(false);
                 }
+              }}
+              modifiers={{
+                hasEntry: (day) => {
+                  const formatted = format(day, "yyyy-MM-dd");
+                  return diaryDates.includes(formatted);
+                },
+              }}
+              modifiersClassNames={{
+                hasEntry: "rdp-day_hasEntry",
               }}
               initialFocus
               className="p-3 pointer-events-auto"

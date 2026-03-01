@@ -30,10 +30,12 @@ interface DailyWorkflowState {
 
     workflowLoading: boolean;
     activityLoading: boolean;
+    dateLoading: boolean;
 
     error: string | null;
     activityPeriod: number | null;
     taskActivities: TaskActivity[];
+    diaryDates: string[];
 }
 
 
@@ -54,10 +56,12 @@ const initialState: DailyWorkflowState = {
 
     workflowLoading: false,
     activityLoading: false,
+    dateLoading:false,
 
     error: null,
     activityPeriod: null,
     taskActivities: [],
+    diaryDates: [],
 };
 
 export interface TaskActivity {
@@ -137,6 +141,46 @@ export const fetchDailyWorkflow = createAsyncThunk(
                 );
             }
             return rejectWithValue("Unexpected error while fetching workflow.");
+        }
+    }
+);
+
+export const fetchWorkDiaryDates = createAsyncThunk<
+    string[], // return type
+    void,
+    { rejectValue: string }
+>(
+    "workDiary/fetchDates",
+    async (_, { rejectWithValue }) => {
+            console.log("aaaaaaaaaaaaa")
+
+        try {
+            const userId = localStorage.getItem("userId");
+            const userType = localStorage.getItem("userType");
+
+            const routeMap: Record<"staff" | "admin", string> = {
+                staff: "staff",
+                admin: "user",
+            };
+
+            if (!userType || !(userType in routeMap)) {
+                return rejectWithValue("Invalid user type");
+            }
+
+            const route = routeMap[userType as "staff" | "admin"];
+
+            const url = `/api/v1/${route}/${userId}/work_diary`;
+
+            const response = await api.getEvents(url);
+
+            const data = response.data.response.data;
+
+            // 🔥 extract only date keys
+            const dates = Object.keys(data);
+
+            return dates;
+        } catch (error: any) {
+            return rejectWithValue("Failed to fetch work diary dates");
         }
     }
 );
@@ -225,6 +269,19 @@ const dailyWorkflowSlice = createSlice({
             .addCase(fetchDailyWorkflow.rejected, (state, action) => {
                 state.workflowLoading = false;
                 state.error = action.payload as string;
+            })
+
+            //---- Dates ----
+            .addCase(fetchWorkDiaryDates.pending, (state) => {
+                state.dateLoading = true;
+            })
+            .addCase(fetchWorkDiaryDates.fulfilled, (state, action) => {
+                state.dateLoading = false;
+                state.diaryDates = action.payload;
+            })
+            .addCase(fetchWorkDiaryDates.rejected, (state, action) => {
+                state.dateLoading = false;
+                state.error = action.payload ?? "Something went wrong";
             })
 
             // ---- ACTIVITY PERIOD ----
