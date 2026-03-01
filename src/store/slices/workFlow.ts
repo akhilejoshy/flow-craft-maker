@@ -38,12 +38,12 @@ interface DailyWorkflowState {
 
 
 export interface ActivityPayload {
-  work_diary_id: number;
-  task_activity_id: number;
-  keyboard_action: number;
-  mouse_action: number;
-  start_time: string;
-  end_time: string;
+    work_diary_id: number;
+    task_activity_id: number;
+    keyboard_action: number;
+    mouse_action: number;
+    start_time: string;
+    end_time: string;
 }
 
 const initialState: DailyWorkflowState = {
@@ -83,9 +83,22 @@ export const fetchDailyWorkflow = createAsyncThunk(
     async (date: string, { rejectWithValue }) => {
         try {
             const userId = localStorage.getItem("userId");
-            // const userId = 2
+            const userType = localStorage.getItem("userType");
+            const routeMap: Record<string, string> = {
+                staff: "staff",
+                admin: "user"
+            };
+            if (!userType) {
+                if (!userType) {
+                    return rejectWithValue("Invalid userType");
+                }
+            }
+            const route = routeMap[userType];
+            if (!route) {
+                return rejectWithValue("Unsupported userType");
+            }
 
-            const url = `/api/v1/user/${userId}/daily_workflow?date=${date}`;
+            const url = `/api/v1/${route}/${userId}/daily_workflow?date=${date}`;
 
             const response = await api.getEvents(url);
 

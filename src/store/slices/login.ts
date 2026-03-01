@@ -36,6 +36,7 @@ export const login = createAsyncThunk(
         localStorage.setItem("employee", String(data.response.full_name));
         localStorage.setItem("email", String(data.response.email));
         localStorage.setItem("token", data.response.token);
+        localStorage.setItem("userType", data.response.userType);
       }
 
       return data;
