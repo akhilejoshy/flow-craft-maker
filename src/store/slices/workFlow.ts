@@ -152,8 +152,6 @@ export const fetchWorkDiaryDates = createAsyncThunk<
 >(
     "workDiary/fetchDates",
     async (_, { rejectWithValue }) => {
-            console.log("aaaaaaaaaaaaa")
-
         try {
             const userId = localStorage.getItem("userId");
             const userType = localStorage.getItem("userType");

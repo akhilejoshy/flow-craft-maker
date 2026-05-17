@@ -29,9 +29,6 @@ const Dashboard: React.FC = () => {
   const [visibleMonth, setVisibleMonth] = useState<Date>(date);
   const highlightedDates = diaryDates.map((d) => new Date(d));
 
-  console.log(diaryDates)
-  console.log(highlightedDates)
-
 
   const [kbRange, setKbRange] = useState<[number, number]>(() => {
     const saved = localStorage.getItem("kbRange")
