@@ -51,11 +51,11 @@ const TopNav: React.FC = () => {
           {/* <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sidebar-primary">
             <Activity className="h-3.5 w-3.5 text-sidebar-primary-foreground" />
           </div> */}
-           <img
-                src={icon}
-                alt="WorkFlow Icon"
-                className="h-7 w-auto object-contain rounded-lg"
-              />
+          <img
+            src={icon}
+            alt="WorkFlow Icon"
+            className="h-7 w-auto object-contain rounded-lg"
+          />
         </div>
         {/* Desktop Nav Links */}
         <nav className="flex items-center gap-4 flex-1">
@@ -79,9 +79,9 @@ const TopNav: React.FC = () => {
           ))}
         </nav>
 
-        <div className="flex-1 sm:hidden" />
+        <div className="flex-1 " />
 
-        <div className="flex sm:hidden items-center">
+        <div className="flex  items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-2 rounded-lg hover:bg-sidebar-accent/50 transition-colors">

@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosRequestConfig } from 'axios';
 
-// const apiUrl = "https://api.cloudhousetechnologies.com"
-const apiUrl = "https://kitfra.cloudstick.io:6443"
+const apiUrl = "https://api.cloudhousetechnologies.com"
+// const apiUrl = "https://kitfra.cloudstick.io:6443"
 // const apiUrl = "http://localhost:8080"
 
 const ApiClient: AxiosInstance = axios.create({

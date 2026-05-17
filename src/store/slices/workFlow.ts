@@ -191,7 +191,7 @@ export const fetchActivityPeriod = createAsyncThunk(
         try {
             const userId = localStorage.getItem("userId");
             // const userId = 2;
-            const url = `/api/v1/employee/${userId}/agent?date=${date}`;
+            const url = `/api/v1/staff/${userId}/agent?date=${date}`;
             const response = await api.getEvents(url);
             const data = response.data.data;
             return {
@@ -223,7 +223,7 @@ export const submitActivity = createAsyncThunk<
         try {
             const assigneeId = localStorage.getItem("userId");
             // const assigneeId = 2
-            const url = `/api/v1/employee/${assigneeId}/agent/activity`;
+            const url = `/api/v1/staff/${assigneeId}/agent/activity`;
             const response = await api.postEvents(url, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });

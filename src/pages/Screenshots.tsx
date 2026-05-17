@@ -202,7 +202,10 @@ const Screenshots: React.FC = () => {
                 <p className="truncate text-xs text-muted-foreground">{file.name}</p>
               </div>
               <button
-                onClick={() => removeFile(file.id, file.fullPath)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeFile(file.id, file.fullPath);
+                }}
                 className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <X className="h-3 w-3" />
