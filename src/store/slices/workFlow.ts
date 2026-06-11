@@ -189,12 +189,12 @@ export const fetchActivityPeriod = createAsyncThunk(
         try {
             const userId = localStorage.getItem("userId");
             // const userId = 2;
-            const url = `/api/v1/staff/${userId}/agent?date=${date}`;
+            const url = `/api/v1/staff/${userId}/agent/list?date=${date}`;
             const response = await api.getEvents(url);
             const data = response.data.data;
             return {
-                activityPeriod: data.activity_period,
-                taskActivities: data.task_activities,
+                activityPeriod: data?.activity_period ?? 600,
+                taskActivities: data?.task_activities ?? [],
             };
 
         } catch (error: any) {
